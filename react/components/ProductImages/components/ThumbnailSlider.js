@@ -1,6 +1,7 @@
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import classNames from 'classnames'
+import { NoSSR } from 'render'
 
 import ThumbnailItem from './ThumbnailItem'
 import ThumbnailArrow from './ThumbnailArrow'
@@ -32,7 +33,7 @@ class ThumbnailSlider extends Component {
       prevArrow: <ThumbnailArrow vertical={sliderVertical} />,
       nextArrow: <ThumbnailArrow inverted vertical={sliderVertical} />,
       slideWidth: 82,
-      slidesToShow: 5,
+      slidesToShow: numOfVisibleItems,
       vertical: sliderVertical,
       verticalSwiping: sliderVertical,
       /** Responsive slider behavior is defined here */
@@ -52,8 +53,47 @@ class ThumbnailSlider extends Component {
     }
   }
 
+  createThumbnailItem = (image, key) => {
+    const { onThumbnailClick } = this.props
+    return <ThumbnailItem key={key} image={image} onClick={onThumbnailClick} />
+  }
+
+  getClassByItemsPerPage(itemsPerPage) {
+    switch (itemsPerPage) {
+      case 5:
+        return 'w-20'
+      case 4:
+        return 'w-25'
+      case 3:
+        return 'w-third'
+    }
+  }
+
+  ssrFallback() {
+    const { maxVisibleItems, images } = this.props
+
+    const numOfVisibleItems = Math.min(maxVisibleItems, MAX_VISIBLE_ITEMS)
+
+    const className = this.getClassByItemsPerPage(numOfVisibleItems)
+
+    return (
+      <div className="flex justify-center">
+        {images.slice(0, numOfVisibleItems).map(image => {
+          return (
+            <div
+              key={image.imageUrl}
+              className={`${className} flex justify-center`}
+            >
+              {this.createThumbnailItem(image)}
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
   render() {
-    const { images, onThumbnailClick, orientation } = this.props
+    const { images, orientation } = this.props
 
     const sliderVertical = orientation === VERTICAL
 
@@ -64,15 +104,11 @@ class ThumbnailSlider extends Component {
 
     return (
       <div className={className}>
-        <Slider sliderSettings={this.sliderSettings}>
-          {images.map(image => (
-            <ThumbnailItem
-              key={image.imageUrl}
-              image={image}
-              onClick={onThumbnailClick}
-            />
-          ))}
-        </Slider>
+        <NoSSR onSSR={this.ssrFallback()}>
+          <Slider sliderSettings={this.sliderSettings}>
+            {images.map(image => this.createThumbnailItem(image))}
+          </Slider>
+        </NoSSR>
       </div>
     )
   }
